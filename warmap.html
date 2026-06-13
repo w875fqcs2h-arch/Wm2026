@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Weltkonflikt · Lagekarte</title>
+<style>
+  :root{--bg:#0B0E10;--panel:#14181C;--panel-2:#191E23;--line:#232A30;--chalk:#F2F4F3;--muted:#8A969E;--muted-2:#5B656C;--war:#FF3B30;--armed:#E0B243;--tension:#4C8DD0;--land:#1B2127;--land-2:#202830;--shadow:0 1px 0 rgba(255,255,255,.03),0 12px 30px rgba(0,0,0,.45);--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;background:var(--bg);color:var(--chalk);font-family:var(--sys);}
+  body{padding:env(safe-area-inset-top) max(14px,env(safe-area-inset-left)) calc(40px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-right));max-width:760px;margin:0 auto;-webkit-font-smoothing:antialiased;}
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,var(--bg) 72%,transparent);padding:14px 0 10px;display:flex;align-items:center;gap:12px;}
+  .wordmark{font-weight:800;letter-spacing:.14em;font-size:13px;text-transform:uppercase;line-height:1;}
+  .wordmark small{display:block;color:var(--muted);font-weight:600;letter-spacing:.22em;font-size:9.5px;margin-top:3px;}
+  .status{margin-left:auto;text-align:right;font-size:11px;color:var(--muted);line-height:1.5;max-width:210px;}
+  .status .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--war);margin-right:5px;vertical-align:middle;}
+  #refresh{border:1px solid var(--line);background:var(--panel);color:var(--chalk);width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer;flex:none;display:grid;place-items:center;transition:transform .4s ease,background .15s;}
+  #refresh:active{background:var(--panel-2);}#refresh.spin{transform:rotate(360deg);}
+  .seg{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin:4px 0 14px;}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);font-family:var(--sys);font-weight:700;font-size:13px;padding:9px 0;border-radius:9px;cursor:pointer;}
+  .seg button.on{background:var(--panel-2);color:var(--chalk);box-shadow:var(--shadow);}
+  .eyebrow{display:flex;align-items:center;gap:9px;margin:24px 2px 12px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+  .eyebrow:first-child{margin-top:0;}.eyebrow .rule{flex:1;height:1px;background:var(--line);}
+  .eyebrow .tag{display:inline-flex;align-items:center;gap:6px;}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--war);animation:pulse 1.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.7);}}
+  /* summary counters */
+  .tally{display:flex;gap:8px;margin:0 0 14px;}
+  .tally .cell{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:11px 12px;box-shadow:var(--shadow);}
+  .tally .n{font-family:var(--mono);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums;line-height:1;display:flex;align-items:center;gap:7px;}
+  .tally .n i{width:9px;height:9px;border-radius:50%;flex:none;}
+  .tally .l{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:6px;}
+  /* map */
+  .mapwrap{position:relative;width:100%;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:radial-gradient(130% 130% at 50% -10%,#0f151b,#080a0c 70%);box-shadow:var(--shadow);margin-bottom:6px;}
+  .mapwrap svg{display:block;width:100%;height:auto;}
+  .grid line{stroke:rgba(35,42,48,.55);stroke-width:.4;}
+  .marker{position:absolute;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;border:1.5px solid rgba(0,0,0,.55);box-shadow:0 0 0 1px rgba(0,0,0,.3),0 2px 6px rgba(0,0,0,.5);z-index:2;}
+  .marker.sel{outline:2px solid var(--chalk);outline-offset:2px;}
+  .marker.war::after{content:"";position:absolute;inset:-1.5px;border-radius:50%;border:1.5px solid var(--war);animation:ring 1.9s ease-out infinite;}
+  @keyframes ring{0%{transform:scale(.7);opacity:.85;}100%{transform:scale(2.4);opacity:0;}}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:12px 2px 2px;font-size:11px;color:var(--muted);}
+  .legend span{display:inline-flex;align-items:center;}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .hint{margin:14px 2px 0;font-size:11px;color:var(--muted-2);line-height:1.6;}
+  /* list cards */
+  .conf{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;box-shadow:var(--shadow);display:flex;align-items:center;gap:13px;cursor:pointer;transition:transform .08s ease;}
+  .conf:active{transform:scale(.985);}
+  .conf.war{border-color:#3a2424;background:linear-gradient(180deg,#181113,var(--panel));}
+  .conf .dot{width:11px;height:11px;border-radius:50%;flex:none;}
+  .conf .body{flex:1;min-width:0;}
+  .conf .nm{font-weight:700;font-size:15px;line-height:1.2;}
+  .conf .pl{font-size:12px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .conf .meta-r{text-align:right;flex:none;}
+  .conf .meta-r .since{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .conf .meta-r .reg{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);margin-top:3px;}
+  .chev{color:var(--muted-2);font-size:18px;flex:none;}
+  .hide{display:none;}
+  footer{margin-top:30px;text-align:center;color:var(--muted-2);font-size:10.5px;line-height:1.6;}
+  /* bottom sheet */
+  #scrim{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;}
+  #scrim.show{opacity:1;pointer-events:auto;}
+  #sheet{position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;background:var(--panel);border-top-left-radius:22px;border-top-right-radius:22px;border:1px solid var(--line);border-bottom:0;transform:translateY(101%);transition:transform .3s cubic-bezier(.22,1,.36,1);z-index:51;max-height:92vh;display:flex;flex-direction:column;}
+  #sheet.show{transform:translateY(0);}
+  .grab{width:38px;height:5px;border-radius:3px;background:#2c343b;margin:9px auto 2px;flex:none;}
+  .shead{display:flex;align-items:flex-start;gap:12px;padding:8px 18px 14px;border-bottom:1px solid var(--line);flex:none;}
+  .shead .vs{flex:1;min-width:0;}
+  .shead .vs .t{font-weight:800;font-size:18px;letter-spacing:-.01em;line-height:1.15;}
+  .shead .vs .s{font-size:12px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:7px;}
+  .shead .vs .s i{width:9px;height:9px;border-radius:50%;flex:none;}
+  .sclose{width:34px;height:34px;border-radius:50%;border:0;background:var(--panel-2);color:var(--chalk);font-size:15px;cursor:pointer;flex:none;}
+  .sbody{overflow:auto;padding:6px 18px calc(26px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;}
+  .sec{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:22px 0 10px;display:flex;align-items:center;gap:9px;}
+  .sec .rule{flex:1;height:1px;background:var(--line);}
+  .meta{font-size:13px;color:var(--muted);line-height:1.85;}
+  .meta b{color:var(--chalk);font-weight:600;}
+  .desc{font-size:14px;line-height:1.6;color:var(--chalk);}
+  .tl{margin:2px 0;}
+  .tl .row{display:flex;gap:13px;padding:8px 2px;border-bottom:1px solid rgba(35,42,48,.5);}
+  .tl .row:last-child{border-bottom:0;}
+  .tl .y{font-family:var(--mono);font-size:12px;color:var(--armed);width:38px;flex:none;font-variant-numeric:tabular-nums;}
+  .tl .x{flex:1;font-size:13.5px;line-height:1.5;}
+</style>
+</head>
+<body>
+<header>
+  <div class="wordmark">Weltkonflikt<small>Globale Lagekarte</small></div>
+  <div class="status" id="status"><span class="dot"></span><span id="stext">lade …</span></div>
+  <button id="refresh" aria-label="Aktualisieren">↻</button>
+</header>
+<div class="seg" role="tablist">
+  <button id="tab-map" class="on">Karte</button>
+  <button id="tab-list">Liste</button>
+</div>
+
+<section id="view-map">
+  <div class="tally" id="tally"></div>
+  <div class="mapwrap">
+    <svg viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet" aria-label="Weltkarte">
+      <g class="grid">
+        <line x1="0" y1="125" x2="1000" y2="125"/><line x1="0" y1="250" x2="1000" y2="250"/><line x1="0" y1="375" x2="1000" y2="375"/>
+        <line x1="250" y1="0" x2="250" y2="500"/><line x1="500" y1="0" x2="500" y2="500"/><line x1="750" y1="0" x2="750" y2="500"/>
+      </g>
+      <g transform="translate(500,250) scale(2.77778,-2.77778)" fill="var(--land)" stroke="var(--land-2)" stroke-width="0.18">
+        <path d="M -168,65 -158,70 -148,71 -140,70 -128,70 -110,69 -95,70 -82,73 -74,68 -64,60 -56,52 -66,45 -70,41 -74,39 -76,35 -81,31 -80,25 -84,30 -90,29 -97,28 -97,22 -106,23 -110,23 -115,29 -117,33 -121,35 -124,40 -124,48 -130,54 -140,59 -150,59 -160,57 -166,60 -168,65 Z"/>
+        <path d="M -45,60 -40,61 -22,70 -19,77 -30,83 -46,83 -58,76 -53,68 -45,60 Z"/>
+        <path d="M -80,9 -73,11 -60,11 -52,5 -50,0 -48,-5 -40,-3 -35,-8 -38,-14 -43,-23 -48,-25 -53,-34 -58,-39 -66,-42 -73,-46 -75,-51 -69,-55 -66,-54 -64,-50 -63,-42 -58,-34 -57,-25 -62,-22 -70,-18 -71,-12 -76,-5 -79,1 -80,9 Z"/>
+        <path d="M -16,14 -10,22 -2,32 8,37 11,34 20,32 25,32 32,31 35,24 38,18 43,12 51,12 49,4 41,-2 40,-11 35,-18 33,-26 27,-33 20,-35 18,-30 12,-20 9,-2 5,4 -2,5 -8,4 -8,8 -16,14 Z"/>
+        <path d="M -9,36 -9,43 -2,44 -1,49 -5,49 -2,52 4,52 2,58 8,58 5,62 12,66 24,66 30,60 28,55 38,55 40,48 30,46 28,41 22,40 16,41 12,45 8,44 3,43 -2,37 -9,36 Z"/>
+        <path d="M 26,40 40,42 48,40 50,30 57,25 63,25 66,25 72,19 78,8 80,12 90,22 92,21 98,8 100,13 105,8 109,11 105,18 108,21 110,21 117,24 122,31 122,37 127,35 129,42 135,45 142,46 138,52 142,59 160,61 170,66 180,67 180,72 160,71 140,73 120,74 100,77 90,75 78,73 66,72 56,70 46,68 38,65 30,60 28,55 38,52 40,48 33,47 28,45 26,40 Z"/>
+        <path d="M 113,-22 114,-30 121,-34 129,-32 137,-35 144,-38 147,-43 150,-37 153,-28 146,-19 142,-11 135,-12 130,-15 122,-18 113,-22 Z"/>
+        <path d="M 95,5 100,1 105,-2 115,-3 122,-2 130,-3 141,-4 132,-1 120,2 108,1 100,3 95,5 Z"/>
+        <path d="M 130,31 134,34 140,36 142,40 140,43 138,38 132,34 130,31 Z"/>
+        <path d="M -6,50 -3,53 -2,57 -6,58 -7,54 -6,50 Z"/>
+        <path d="M 46,-12 50,-16 50,-25 46,-25 45,-18 46,-12 Z"/>
+      </g>
+    </svg>
+    <div id="markers"></div>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--war)"></i>Krieg</span>
+    <span><i style="background:var(--armed)"></i>Bewaffneter Konflikt</span>
+    <span><i style="background:var(--tension)"></i>Krise / Spannungen</span>
+  </div>
+  <div class="hint">Marker antippen für Details · Lage nur ungefähr · kuratierter Überblick, keine Live-Quelle.</div>
+</section>
+
+<section id="view-list" class="hide"></section>
+
+<footer>Datenstand Juni 2026 · redaktioneller Überblick aus öffentlicher Berichterstattung · keine Echtzeitdaten · Einordnung ohne Anspruch auf Vollständigkeit.</footer>
+
+<div id="scrim"></div>
+<div id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div class="shead" id="shead"></div><div class="sbody" id="sbody"></div></div>
+
+<script>
+const TIERS={
+  war:{label:"Krieg",color:"var(--war)",rank:0},
+  armed:{label:"Bewaffneter Konflikt",color:"var(--armed)",rank:1},
+  tension:{label:"Krise / Spannungen",color:"var(--tension)",rank:2}
+};
+
+/* Kuratierter Überblick laufender Konflikte & Krisenherde (Stand 2026). lat/lon = ungefähre Lage. */
+const CONFLICTS=[
+  {id:"ukr",name:"Russland – Ukraine",region:"Osteuropa",lat:49,lon:32,tier:"war",since:2022,
+   parties:["Russland","Ukraine"],status:"Aktiver Krieg · Stellungs- und Luftkrieg",
+   summary:"Seit dem russischen Großangriff 2022 läuft der größte zwischenstaatliche Krieg in Europa seit 1945, mit Frontlinien im Osten und Süden der Ukraine sowie anhaltenden Luftangriffen auf beide Seiten.",
+   timeline:[["2014","Annexion der Krim, Beginn des Donbas-Konflikts"],["2022","Russische Großinvasion"],["2023–25","Gegenoffensiven, Stellungskrieg, Drohnenkrieg"]]},
+  {id:"gaza",name:"Israel – Gaza",region:"Naher Osten",lat:31.4,lon:34.4,tier:"war",since:2023,
+   parties:["Israel","Hamas"],status:"Krieg / fragile Waffenruhe-Phasen",
+   summary:"Nach dem Hamas-Angriff vom Oktober 2023 und der israelischen Offensive im Gazastreifen folgten schwere Kämpfe, eine humanitäre Krise und mehrere brüchige Waffenruhen.",
+   timeline:[["2023","Hamas-Angriff, Beginn der Gaza-Offensive"],["2024","Bodenoffensive, humanitäre Krise"],["2025","Wechselnde Waffenruhe- und Verhandlungsphasen"]]},
+  {id:"sudan",name:"Sudan – Bürgerkrieg",region:"Nordostafrika",lat:15,lon:30,tier:"war",since:2023,
+   parties:["Armee (SAF)","RSF-Miliz"],status:"Aktiver Bürgerkrieg",
+   summary:"Der Machtkampf zwischen der sudanesischen Armee und der RSF-Miliz löste eine der größten Vertreibungs- und Hungerkrisen der Welt aus.",
+   timeline:[["2023","Ausbruch der Kämpfe in Khartum"],["2024","Ausweitung auf Darfur, Massenvertreibung"],["2025","Anhaltende Front- und Hungerkrise"]]},
+  {id:"mya",name:"Myanmar – Bürgerkrieg",region:"Südostasien",lat:21,lon:96,tier:"war",since:2021,
+   parties:["Militärjunta","Widerstand & ethnische Armeen"],status:"Landesweiter Bürgerkrieg",
+   summary:"Nach dem Militärputsch 2021 weitete sich der bewaffnete Widerstand stark aus; ethnische Armeen und Widerstandsgruppen kontrollieren Teile des Landes.",
+   timeline:[["2021","Militärputsch"],["2023","Offensive der Widerstandsallianz"],["2024–25","Junta verliert weitere Gebiete"]]},
+  {id:"drc",name:"DR Kongo – Ostkongo / M23",region:"Zentralafrika",lat:-1.7,lon:29,tier:"war",since:2022,
+   parties:["DR Kongo","M23-Rebellen"],status:"Eskalierter Regionalkonflikt",
+   summary:"Im rohstoffreichen Osten der DR Kongo kämpfen Regierungstruppen gegen die M23-Rebellen; 2025 fielen mehrere Großstädte, mit regionaler Verwicklung der Nachbarstaaten.",
+   timeline:[["2022","Wiederaufleben der M23"],["2025","Einnahme von Goma und Bukavu"],["2025","Vermittlungsversuche, fragile Gespräche"]]},
+  {id:"sahel",name:"Sahel – Jihadismus",region:"Westafrika",lat:14,lon:-1,tier:"armed",since:2012,
+   parties:["Mali · Burkina Faso · Niger","Jihadistische Gruppen"],status:"Anhaltende Aufstandsbekämpfung",
+   summary:"In der Sahelzone kämpfen Militärregierungen gegen mit al-Qaida und IS verbundene Gruppen; nach mehreren Putschen verschob sich die Sicherheitslage und die internationalen Allianzen.",
+   timeline:[["2012","Aufstand in Nordmali"],["2020–23","Putschwelle in der Region"],["2024–25","Rückzug westlicher Truppen, neue Allianzen"]]},
+  {id:"syr",name:"Syrien – Übergang",region:"Naher Osten",lat:35,lon:38,tier:"armed",since:2011,
+   parties:["Übergangsregierung","bewaffnete Fraktionen"],status:"Instabiler Übergang nach Assad",
+   summary:"Nach dem Sturz der Assad-Regierung Ende 2024 ringt Syrien um einen Übergang; lokale Zusammenstöße, Kontrolle durch verschiedene Fraktionen und ungelöste Spannungen prägen die Lage.",
+   timeline:[["2011","Beginn des Bürgerkriegs"],["2024","Sturz der Assad-Regierung"],["2025","Übergangsphase, vereinzelte Gewalt"]]},
+  {id:"yem",name:"Jemen – Konflikt",region:"Arabische Halbinsel",lat:15.5,lon:44,tier:"armed",since:2014,
+   parties:["Huthi-Bewegung","Regierung & Koalition"],status:"Brüchige Waffenruhe, Rotmeer-Spannungen",
+   summary:"Der jahrelange Bürgerkrieg ist weitgehend eingefroren, doch Huthi-Angriffe auf die Schifffahrt im Roten Meer machten den Jemen zu einem internationalen Brennpunkt.",
+   timeline:[["2014","Huthi-Vormarsch auf Sanaa"],["2022","UN-vermittelte Waffenruhe"],["2024–25","Angriffe auf Rotmeer-Schifffahrt"]]},
+  {id:"eth",name:"Äthiopien – Spannungen",region:"Ostafrika",lat:11,lon:39,tier:"armed",since:2023,
+   parties:["Bundesregierung","Amhara-Milizen u.a."],status:"Regionale Kämpfe nach Tigray-Krieg",
+   summary:"Nach dem Friedensschluss für Tigray (2022) verlagerten sich die Kämpfe in die Amhara-Region; ungelöste Spannungen halten das Land instabil.",
+   timeline:[["2020","Tigray-Krieg"],["2022","Friedensabkommen für Tigray"],["2023–25","Aufstand in Amhara"]]},
+  {id:"som",name:"Somalia – al-Shabaab",region:"Ostafrika",lat:5,lon:46,tier:"armed",since:2009,
+   parties:["Somalia & Verbündete","al-Shabaab"],status:"Anhaltender Aufstand",
+   summary:"Die Regierung und regionale Truppen führen eine langjährige Offensive gegen die al-Shabaab-Miliz, die weiterhin Anschläge verübt und ländliche Gebiete kontrolliert.",
+   timeline:[["2009","Erstarken von al-Shabaab"],["2022","Großoffensive der Regierung"],["2024–25","Wechselnde Geländegewinne"]]},
+  {id:"nga",name:"Nigeria – Nordost",region:"Westafrika",lat:11,lon:13,tier:"armed",since:2009,
+   parties:["Nigeria","Boko Haram / ISWAP"],status:"Aufstand & Entführungswellen",
+   summary:"Im Nordosten Nigerias kämpfen Sicherheitskräfte gegen Boko Haram und ISWAP; zusätzlich erschüttern Banden­entführungen den Nordwesten des Landes.",
+   timeline:[["2009","Beginn des Boko-Haram-Aufstands"],["2016","Spaltung, ISWAP entsteht"],["2023–25","Anschläge und Entführungen halten an"]]},
+  {id:"pak",name:"Pakistan – Belutschistan & TTP",region:"Südasien",lat:28,lon:66,tier:"armed",since:2007,
+   parties:["Pakistan","TTP · belutschische Gruppen"],status:"Aufstand mit häufigen Anschlägen",
+   summary:"Pakistan steht unter Druck durch die wiedererstarkte TTP im Nordwesten und separatistische Gruppen in Belutschistan; grenzüberschreitende Spannungen mit Afghanistan kommen hinzu.",
+   timeline:[["2007","Gründung der TTP"],["2022","Ende der Waffenruhe mit der TTP"],["2024–25","Zunahme der Anschläge"]]},
+  {id:"col",name:"Kolumbien – Restkonflikt",region:"Südamerika",lat:4,lon:-73,tier:"armed",since:1964,
+   parties:["Staat","ELN & FARC-Dissidenten"],status:'Stockender „Totaler Frieden"',
+   summary:"Trotz des Friedens­abkommens von 2016 kämpfen Staat und bewaffnete Gruppen wie ELN und FARC-Dissidenten weiter; Verhandlungen verlaufen schleppend.",
+   timeline:[["1964","Beginn des bewaffneten Konflikts"],["2016","Friedensabkommen mit der FARC"],["2023–25","Gespräche und neue Gewaltwellen"]]},
+  {id:"hai",name:"Haiti – Bandengewalt",region:"Karibik",lat:18.6,lon:-72.3,tier:"armed",since:2021,
+   parties:["Übergangsrat","Banden-Allianzen"],status:"Staatskrise, internationale Mission",
+   summary:"Nach der Ermordung des Präsidenten 2021 kontrollieren Banden große Teile der Hauptstadt; eine international unterstützte Sicherheitsmission soll die Lage stabilisieren.",
+   timeline:[["2021","Ermordung des Präsidenten"],["2024","Banden überrennen Teile der Hauptstadt"],["2024–25","Internationale Sicherheitsmission"]]},
+  {id:"isr-leb",name:"Israel – Libanon",region:"Naher Osten",lat:33.8,lon:35.5,tier:"tension",since:2023,
+   parties:["Israel","Hisbollah"],status:"Fragile Waffenruhe",
+   summary:"Nach schweren Gefechten 2024 gilt seit Ende 2024 eine brüchige Waffenruhe zwischen Israel und der Hisbollah, die immer wieder durch Zwischenfälle belastet wird.",
+   timeline:[["2023","Grenzgefechte nach Gaza-Eskalation"],["2024","Offene Kämpfe, Bodenoperation"],["2024","Waffenruhe-Abkommen"]]},
+  {id:"irn",name:"Iran – Israel",region:"Naher Osten",lat:32,lon:53,tier:"tension",since:2024,
+   parties:["Iran","Israel"],status:"Direkte Konfrontation in Schüben",
+   summary:"Der lange indirekte Schattenkrieg schlug 2024–25 in offene gegenseitige Luft- und Raketenangriffe um; die Lage bleibt eine der gefährlichsten Eskalationsachsen der Region.",
+   timeline:[["2024","Erste direkte Raketenangriffe"],["2025","Weitere Schlagabtausche"],["2025","Anhaltende Eskalationsgefahr"]]},
+  {id:"arm-aze",name:"Armenien – Aserbaidschan",region:"Südkaukasus",lat:40,lon:46.5,tier:"tension",since:2020,
+   parties:["Armenien","Aserbaidschan"],status:"Verhandlungen nach Berg-Karabach",
+   summary:"Nach der aserbaidschanischen Rückeroberung Berg-Karabachs 2023 und der Flucht der armenischen Bevölkerung ringen beide Staaten um ein dauerhaftes Friedensabkommen.",
+   timeline:[["2020","Zweiter Berg-Karabach-Krieg"],["2023","Aserbaidschan erobert Karabach"],["2024–25","Verhandlungen über Friedensvertrag"]]},
+  {id:"twn",name:"Taiwanstraße",region:"Ostasien",lat:24,lon:119,tier:"tension",since:0,
+   parties:["China","Taiwan / USA"],status:"Anhaltende militärische Spannungen",
+   summary:"China hält den militärischen Druck auf Taiwan mit regelmäßigen Manövern und Grauzonen-Aktionen aufrecht; die Taiwanstraße gilt als globaler Risikoherd.",
+   timeline:[["2022","Großmanöver nach Spitzenbesuch"],["2024","Manöver nach Amtseinführung"],["2025","Daueranspannung in der Straße"]]},
+  {id:"kor",name:"Koreanische Halbinsel",region:"Ostasien",lat:38,lon:127,tier:"tension",since:0,
+   parties:["Nordkorea","Südkorea / USA"],status:"Erhöhte Spannungen",
+   summary:"Nordkoreas Raketen- und Nuklearprogramm sowie aufgekündigte Entspannungsschritte halten die Spannungen an der innerkoreanischen Grenze hoch.",
+   timeline:[["2023","Rekord an Raketentests"],["2024","Aufkündigung von Entspannungs-Abkommen"],["2025","Anhaltende Provokationen"]]}
+];
+
+const $=s=>document.querySelector(s);
+const esc=s=>(s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tierColor=t=>TIERS[t].color;
+const xPct=lon=>(lon+180)/360*100;
+const yPct=lat=>(90-lat)/180*100;
+let selId=null;
+
+/* ---------- counters ---------- */
+function renderTally(){
+  const c={war:0,armed:0,tension:0};
+  CONFLICTS.forEach(x=>c[x.tier]++);
+  $("#tally").innerHTML=[
+    ["war","Kriege"],["armed","Konflikte"],["tension","Krisenherde"]
+  ].map(([k,l])=>`<div class="cell"><div class="n"><i style="background:${tierColor(k)}"></i>${c[k]}</div><div class="l">${l}</div></div>`).join("");
+  $("#stext").textContent=c.war+" Kriege aktiv · Stand Juni 2026";
+}
+
+/* ---------- map markers ---------- */
+function renderMarkers(){
+  const order={war:3,armed:2,tension:1};
+  const html=[...CONFLICTS].sort((a,b)=>order[a.tier]-order[b.tier]).map(x=>{
+    const sz=x.tier==="war"?15:x.tier==="armed"?12:10;
+    return `<button class="marker ${x.tier} ${x.id===selId?"sel":""}" data-id="${x.id}" title="${esc(x.name)}"
+      style="left:${xPct(x.lon).toFixed(2)}%;top:${yPct(x.lat).toFixed(2)}%;width:${sz}px;height:${sz}px;background:${tierColor(x.tier)};"></button>`;
+  }).join("");
+  $("#markers").innerHTML=html;
+  $("#markers").querySelectorAll(".marker").forEach(b=>b.onclick=()=>openConflict(b.dataset.id));
+}
+
+/* ---------- list ---------- */
+function renderList(){
+  const groups=[["war","Kriege"],["armed","Bewaffnete Konflikte"],["tension","Krisen & Spannungen"]];
+  let html="";
+  groups.forEach(([tier,title])=>{
+    const items=CONFLICTS.filter(x=>x.tier===tier).sort((a,b)=>(b.since||0)-(a.since||0));
+    if(!items.length)return;
+    const live=tier==="war"?`<span class="tag" style="color:var(--war)"><span class="pulse"></span></span>`:"";
+    html+=`<div class="eyebrow">${live}${esc(title)} · ${items.length}<span class="rule"></span></div>`;
+    html+=items.map(x=>`
+      <div class="conf ${tier==='war'?'war':''}" onclick="openConflict('${x.id}')">
+        <span class="dot" style="background:${tierColor(tier)}"></span>
+        <div class="body">
+          <div class="nm">${esc(x.name)}</div>
+          <div class="pl">${esc(x.parties.join("  ·  "))}</div>
+        </div>
+        <div class="meta-r">
+          <div class="since">${x.since?"seit "+x.since:"andauernd"}</div>
+          <div class="reg">${esc(x.region)}</div>
+        </div>
+        <span class="chev">›</span>
+      </div>`).join("");
+  });
+  $("#view-list").innerHTML=html;
+}
+
+/* ---------- detail sheet ---------- */
+function openSheet(){$("#scrim").classList.add("show");$("#sheet").classList.add("show");document.body.style.overflow="hidden";$("#sbody").scrollTop=0;}
+function closeSheet(){$("#scrim").classList.remove("show");$("#sheet").classList.remove("show");document.body.style.overflow="";selId=null;renderMarkers();}
+$("#scrim").onclick=closeSheet;
+const SECT=t=>`<div class="sec">${esc(t)}<span class="rule"></span></div>`;
+
+function openConflict(id){
+  const x=CONFLICTS.find(c=>c.id===id);if(!x)return;
+  selId=id;renderMarkers();
+  const T=TIERS[x.tier];
+  $("#shead").innerHTML=`<button class="sclose" onclick="closeSheet()" aria-label="Schließen">✕</button>
+    <div class="vs"><div class="t">${esc(x.name)}</div>
+      <div class="s"><i style="background:${T.color}"></i>${esc(T.label)} · ${esc(x.region)}</div></div>`;
+  const meta=[
+    `Region: <b>${esc(x.region)}</b>`,
+    `Beginn: <b>${x.since?x.since:"langjährig"}</b>`,
+    `Beteiligte: <b>${esc(x.parties.join(", "))}</b>`,
+    `Status: <b>${esc(x.status)}</b>`
+  ].join("<br>");
+  const tl=x.timeline?.length?SECT("Verlauf")+`<div class="tl">`+x.timeline.map(([y,t])=>`<div class="row"><span class="y">${esc(y)}</span><span class="x">${esc(t)}</span></div>`).join("")+`</div>`:"";
+  $("#sbody").innerHTML=
+    SECT("Überblick")+`<div class="meta">${meta}</div>`+
+    SECT("Hintergrund")+`<div class="desc">${esc(x.summary)}</div>`+
+    tl;
+  openSheet();
+}
+
+/* ---------- tabs ---------- */
+function view(w){const m=w==="map";$("#view-map").classList.toggle("hide",!m);$("#view-list").classList.toggle("hide",m);$("#tab-map").classList.toggle("on",m);$("#tab-list").classList.toggle("on",!m);}
+$("#tab-map").onclick=()=>view("map");
+$("#tab-list").onclick=()=>view("list");
+$("#refresh").onclick=()=>{const b=$("#refresh");b.classList.add("spin");setTimeout(()=>b.classList.remove("spin"),500);renderTally();};
+
+renderTally();renderMarkers();renderList();
+</script>
+</body>
+</html>
