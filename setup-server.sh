@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Richtet ein altes (Linux-)MacBook als Server/Zugangs-Rechner ein.
-# Getestet für Ubuntu / Debian / Linux Mint (apt-basiert).
+# Für Ubuntu / Debian / Linux Mint (apt-basiert).
 set -e
 
 if ! command -v apt >/dev/null; then
@@ -8,7 +8,7 @@ if ! command -v apt >/dev/null; then
 fi
 
 echo "==> 1/6 System aktualisieren"
-sudo apt update
+sudo apt update || echo "!! Einige Paketquellen fehlerhaft (z. B. Steam) – mache trotzdem weiter."
 sudo apt full-upgrade -y
 
 echo "==> 2/6 Werkzeuge installieren"
